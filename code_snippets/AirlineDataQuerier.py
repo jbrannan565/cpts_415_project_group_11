@@ -150,6 +150,29 @@ class AirlineDataQuerier:
 
         return self.run_query(query)
     
+    def get_k_closest_airport_to_city(self, city, k):
+        """
+        Find the k closest airport to `city` and get the Airport_Name, 
+        Airport_ID and distance between the city and the airport
+        """
+        query = f"""
+        SELECT SQRT(POW(a_lat - c_lat, 2) + POW(a_long - c_long, 2)) as dist, Airport_Name, Airport_ID
+        FROM
+        (SELECT a.Latitude as a_lat, a.Longitude as a_long, a.Name as Airport_Name, a.Airport_ID, c.Latitude as c_lat, c.Longitude as c_long
+        FROM
+        (SELECT Airports.Latitude, Airports.Longitude, Airports.Name, Airports.Airport_ID
+        FROM Airports
+        WHERE Latitude NOT LIKE 'Latitude' AND Longitude NOT LIKE 'Longitude'
+        ) as a 
+        INNER JOIN
+        (SELECT Cities.Latitude, Cities.Longitude 
+        FROM Cities  WHERE Name='{city}' LIMIT 1) as c)
+        ORDER BY dist ASC
+        LIMIT {k}
+        """
+
+        return self.run_query(query)
+    
     def get_airport_in_each_state(self):
         """Get the airport in each state, selecting the Airport_ID, Airport_name, and s_name (State name)"""
         query = f"""
