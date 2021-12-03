@@ -4,12 +4,12 @@ from sedona.utils import SedonaKryoRegistrator, KryoSerializer
 
 class AirlineDataQuerier:
     """Run queries against an apache spark instance to get Airline info"""
-    def __init__(self):
+    def __init__(self, master='local[*]', appname='Milestone3'):
         # Create spark session
         self.spark = SparkSession. \
             builder. \
-            appName('Milestone3'). \
-            master('local[*]'). \
+            appName(appname). \
+            master(master). \
             config("spark.serializer", KryoSerializer.getName). \
             config("spark.kryo.registrator", SedonaKryoRegistrator.getName). \
             config('spark.jars.packages',
@@ -66,7 +66,7 @@ class AirlineDataQuerier:
     
     def run_query(self, query):
         """Run a query against apache spark instance"""
-        return self.spark.sql(query).collect()
+        return self.spark.sql(query)
     
     def get_airports_in_country(self, country_name):
         """Get a list of Airport_IDs and Names of the airports in country `country_name`"""
@@ -156,7 +156,13 @@ class AirlineDataQuerier:
         Airport_ID and distance between the city and the airport
         """
         query = f"""
-        SELECT SQRT(POW(a_lat - c_lat, 2) + POW(a_long - c_long, 2)) as dist, Airport_Name, Airport_ID
+        SELECT ST_Distance(
+                ST_GeomFromWKT(CONCAT('POINT(', c_long, ' ', c_lat, ')')),
+                ST_GeomFromWKT(CONCAT('POINT(', a_lat, ' ', a_long, ')'))                
+            ) as dist, 
+        a_lat as airport_lat, a_long as airport_long, 
+        c_lat as city_lat, c_long as city_long,
+        Airport_Name, Airport_ID
         FROM
         (SELECT a.Latitude as a_lat, a.Longitude as a_long, a.Name as Airport_Name, a.Airport_ID, c.Latitude as c_lat, c.Longitude as c_long
         FROM
